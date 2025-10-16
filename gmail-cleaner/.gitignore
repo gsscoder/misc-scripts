@@ -1,0 +1,62 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+
+# Poetry & dependency files
+# Keep these:
+# pyproject.toml
+# poetry.lock
+# Ignore caches or temporary stuff:
+.poetry/
+
+# IDE/editor settings
+# VS Code
+.vscode/
+# PyCharm
+.idea/
+*.iml
+
+# OS files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Build directories
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Environment files
+.env
+.env.*.local
+
+# App config
+src/snipebot/config/config.py
