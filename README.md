@@ -7,3 +7,5 @@ Collection of **various scripts** with no usage instructions and **no warranties
 - `printTree.ps1`: pretty prints a directory tree to console
 
 - `gmail-cleaner.py`: cleans up a long-neglected Gmail inbox (by month and year)
+
+- `wipeMegaLeftovers.ps1`: removes MEGA Sync leftover folders from Windows Explorer
