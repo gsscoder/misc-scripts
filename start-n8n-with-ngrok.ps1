@@ -22,14 +22,20 @@ try {
 
 Write-Host "ngrok URL: $ngrokUrl" -ForegroundColor Green
 
-# Start n8n with EXPLICIT volume: n8n_data -> /home/node/.n8n
+# Always pull the latest full image from Docker Hub
+Write-Host "Pulling latest n8n image..." -ForegroundColor Cyan
+docker pull n8nio/n8n:latest | Out-Null
+
+# Start n8n with persistent volume and webhook URL
 Write-Host "Starting n8n with volume 'n8n_data'..." -ForegroundColor Cyan
 docker run -d `
   --name n8n `
   -p 5678:5678 `
   -v n8n_data:/home/node/.n8n `
   -e WEBHOOK_URL="$ngrokUrl/" `
-  docker.n8n.io/n8nio/n8n:latest | Out-Null
+  -e GENERIC_TIMEZONE="Europe/Rome" `
+  -e N8N_BASIC_AUTH_ACTIVE=false `
+  n8nio/n8n:latest | Out-Null
 
 Write-Host ""
 Write-Host "SUCCESS: n8n is running!" -ForegroundColor Green
