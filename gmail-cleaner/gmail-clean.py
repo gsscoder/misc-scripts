@@ -32,7 +32,7 @@ def authenticate_gmail(credfile):
     return build("gmail", "v1", credentials=creds)
 
 
-def delete_messages_for_month(service, year, month, location):
+def delete_messages_for_month(service, year, month, location, sender):
     start_date = datetime.date(year, month, 1)
     if month == 12:
         end_date = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
@@ -43,41 +43,53 @@ def delete_messages_for_month(service, year, month, location):
     end_str = (end_date + datetime.timedelta(days=1)).strftime("%Y/%m/%d")  # exclusive end
     
     # Build query with location (label)
+    query_parts = [f"after:{start_str}", f"before:{end_str}"]
+    
     if location.lower() == "inbox":
-        query = f"after:{start_str} before:{end_str} in:inbox"
+        query_parts.append("in:inbox")
     else:
-        query = f"after:{start_str} before:{end_str} label:{location}"
+        query_parts.append(f"label:{location}")
+    
+    # Add sender filter if provided
+    if sender:
+        query_parts.append(f"from:{sender}")
+    
+    query = " ".join(query_parts)
     
     location_display = "inbox" if location.lower() == "inbox" else f"label '{location}'"
-    print(f"🔍 Searching for messages in {location_display} from {start_str} to {end_str}...")
+    sender_display = f" from sender '{sender}'" if sender else ""
+    
+    print(f"🔍 Searching for messages in {location_display}{sender_display} from {start_str} to {end_str}...")
 
     results = service.users().messages().list(userId="me", q=query, maxResults=10000).execute()
     messages = results.get("messages", [])
 
     if not messages:
-        print(f"No messages found in {location_display} for the specified month.")
+        print(f"No messages found in {location_display}{sender_display} for the specified month.")
         return
 
-    print(f"Found {len(messages)} messages to delete from {location_display}.")
+    print(f"Found {len(messages)} messages to delete from {location_display}{sender_display}.")
     batch_size = 999
 
     for i in range(0, len(messages), batch_size):
         batch = messages[i : i + batch_size]
         ids = [msg["id"] for msg in batch]
-        print(f"🗑️  Deleting batch of {len(ids)} messages from {location_display}...")
+        print(f"🗑️  Deleting batch of {len(ids)} messages from {location_display}{sender_display}...")
         service.users().messages().batchDelete(userId="me", body={"ids": ids}).execute()
 
-    print(f"✅ Successfully deleted {len(messages)} messages from {location_display} ({year}-{month:02d})")
+    print(f"✅ Successfully deleted {len(messages)} messages from {location_display}{sender_display} ({year}-{month:02d})")
 
 
-def delete_messages_for_year(service, year, location):
-    """Delete all messages from the entire year for a specific location"""
+def delete_messages_for_year(service, year, location, sender):
+    """Delete all messages from the entire year for a specific location and optional sender"""
     for month in range(1, 13):
-        delete_messages_for_month(service, year, month, location)
+        delete_messages_for_month(service, year, month, location, sender)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Delete Gmail messages for a specific month or entire year from a location (inbox or label)")
+    parser = argparse.ArgumentParser(
+        description="Delete Gmail messages for a specific month or entire year from a location (inbox or label) with optional sender filter"
+    )
     parser.add_argument("-y", "--year", type=int, required=True, help="Year (e.g., 2024)")
     parser.add_argument("-m", "--month", type=int, choices=range(1, 13), help="Month (1–12). Omit to delete entire year")
     parser.add_argument(
@@ -88,6 +100,10 @@ def main():
         help="Location to delete from: 'inbox' (case-insensitive) for inbox, or any other Gmail label/tag name"
     )
     parser.add_argument(
+        "-s", "--sender", type=str, 
+        help="Optional: Filter by sender email address (e.g., 'newsletter@example.com')"
+    )
+    parser.add_argument(
         "-f", "--force", action="store_true", help="Skip confirmation prompt (ignored if deleting entire year)"
     )
 
@@ -96,27 +112,28 @@ def main():
     service = authenticate_gmail(args.credfile)
     
     location_display = "inbox" if args.location.lower() == "inbox" else f"label '{args.location}'"
-
+    sender_display = f" from sender '{args.sender}'" if args.sender else ""
+    
     if args.month is None:
         # Deleting entire year
-        print(f"⚠️  WARNING: This will permanently delete ALL messages from {args.year} (entire year) in {location_display}.")
+        print(f"⚠️  WARNING: This will permanently delete ALL messages from {args.year} (entire year) in {location_display}{sender_display}.")
         confirm = input("Are you sure you want to continue? (yes/no): ")
         if confirm.lower() != "yes":
             print("Operation cancelled.")
             return
-        delete_messages_for_year(service, args.year, args.location)
+        delete_messages_for_year(service, args.year, args.location, args.sender)
     else:
         # Deleting specific month
         if not args.force:
-            print(f"⚠️  WARNING: This will permanently delete ALL messages from {args.year}-{args.month:02d} in {location_display}.")
+            print(f"⚠️  WARNING: This will permanently delete ALL messages from {args.year}-{args.month:02d} in {location_display}{sender_display}.")
             confirm = input("Are you sure you want to continue? (yes/no): ")
             if confirm.lower() != "yes":
                 print("Operation cancelled.")
                 return
         else:
-            print(f"⚠️  WARNING: Skipping confirmation. Deleting ALL messages from {args.year}-{args.month:02d} in {location_display}.")
+            print(f"⚠️  WARNING: Skipping confirmation. Deleting ALL messages from {args.year}-{args.month:02d} in {location_display}{sender_display}.")
 
-        delete_messages_for_month(service, args.year, args.month, args.location)
+        delete_messages_for_month(service, args.year, args.month, args.location, args.sender)
 
 
 if __name__ == "__main__":
